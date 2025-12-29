@@ -8,6 +8,7 @@ readme = "README.md"
 keywords = ["ocsf", "security", "siem"]
 categories = ["security", "parser-implementations", "data-structures"]
 repository = "https://github.com/dmitrikaramazov/ocsf-types-rs"
+documentation = "https://docs.rs/ocsf-types"
 
 exclude = [
     "src/resolved.json",
