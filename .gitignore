@@ -1,0 +1,6 @@
+/target
+requirements.txt
+.venv/
+*.py
+
+src/resolved.json

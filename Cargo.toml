@@ -1,0 +1,28 @@
+[package]
+name = "ocsf-types"
+version = "0.1.0"
+edition = "2024"
+description = "Strongly typed Rust structs for the OCSF (Open Cybersecurity Schema Framework)"
+license = "MIT"
+readme = "README.md"
+keywords = ["ocsf", "security", "siem"]
+categories = ["data-structures", "encoding", "parsing"]
+
+exclude = [
+    "src/resolved.json",
+    "ocsf-schema",
+    ".github",
+    ".gitignore",
+]
+
+[dependencies]
+serde = {version="1.0.228", features=["derive"]}
+serde_json = "1.0.148"
+
+[dev-dependencies]
+anyhow = "1.0.100"
+heck = "0.5.0"
+proc-macro2 = "1.0.104"
+quote = "1.0.42"
+serde = {version="1.0.228", features=["derive"]}
+serde_json = "1.0.148"
