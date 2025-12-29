@@ -6,7 +6,8 @@ description = "Strongly typed Rust structs for the OCSF (Open Cybersecurity Sche
 license = "MIT"
 readme = "README.md"
 keywords = ["ocsf", "security", "siem"]
-categories = ["data-structures", "encoding", "parsing"]
+categories = ["security", "parser-implementations", "data-structures"]
+repository = "https://github.com/dmitrikaramazov/ocsf-types-rs"
 
 exclude = [
     "src/resolved.json",
