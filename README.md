@@ -3,6 +3,8 @@ Strongly typed Rust structs for the [OCSF](https://schema.ocsf.io/)
 
 This crate provides native Rust types for OCSF events, objects, and enums. It is generated programmatically from the official OCSF schema. It uses the official python OCSF compile tool to first create a flattened JSON schema then use `serde` to parse it. 
 
+The goal of this project is to provide an easy, safe interface that fully matches the OCSF specifications. 
+
 ## Usage
 
 Add this to your `Cargo.toml`:
@@ -40,3 +42,10 @@ cargo run --example generate
 cargo build
 ```
 Note - if generate.rs is failing, make sure there exists a src/ocsf_generated.rs file
+
+## Notes
+We currently ignore data if it is unknown and not mapped to any fields. 
+This may result in data loss, but abides by the OCSF standards.
+Any data not in a field which should be saved, should be tied to the `unmapped` field by the client.
+
+We do not validate fields, yet. Someone may put in `severity_id:-1` which we would parse without error. 

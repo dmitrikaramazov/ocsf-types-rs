@@ -1,0 +1,63 @@
+{
+    "message": "proc venice band",
+    "status": "Failure",
+    "time": 1767056773598,
+    "metadata": {
+      "version": "1.7.0",
+      "debug": [
+        "electrical revision remarks",
+        "amendment jackets confirmation"
+      ],
+      "product": {
+        "name": "dreams hungarian operators",
+        "version": "1.7.0",
+        "uid": "bc63c1e4-e51b-11f0-b104-d6ff413579c1",
+        "lang": "en",
+        "url_string": "neighborhood",
+        "vendor_name": "eat cinema streaming"
+      },
+      "log_level": "skill munich ftp",
+      "profiles": [],
+      "log_format": "pope lonely cg",
+      "log_name": "luke album une",
+      "log_source": "cdt rest dicke",
+      "modified_time": 1767056773598,
+      "original_time": "interviews calvin surfing",
+      "reporter": {
+        "name": "angeles pick chips",
+        "ip": "187.189.61.251",
+        "hostname": "malaysia.museum",
+        "uid": "bc636668-e51b-11f0-932a-d6ff413579c1"
+      },
+      "tenant_uid": "bc63cf86-e51b-11f0-b90c-d6ff413579c1",
+      "transmit_time": 1767056773601
+    },
+    "severity": "si",
+    "duration": 2140051632,
+    "category_uid": 5,
+    "activity_id": 1,
+    "type_uid": 500101,
+    "type_name": "Device Inventory Info: Log",
+    "observables": [
+      {
+        "name": "weeks cam reflects",
+        "type": "Registry Key",
+        "value": "alberta dx deliver",
+        "type_id": 28,
+        "event_uid": "bc63ea5c-e51b-11f0-9e1b-d6ff413579c1",
+        "reputation": {
+          "base_score": 86.933,
+          "provider": "mel assume trigger",
+          "score": "Malicious",
+          "score_id": 10
+        }
+      }
+    ],
+    "class_uid": 5001,
+    "class_name": "Device Inventory Info",
+    "timezone_offset": 63,
+    "severity_id": 99,
+    "status_code": "funded",
+    "status_detail": "proprietary fingers tigers",
+    "status_id": 2
+  }
