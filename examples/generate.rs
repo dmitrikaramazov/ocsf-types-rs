@@ -149,17 +149,25 @@ fn generate_struct(name: &str, def: &ClassDef) -> TokenStream {
             raw_type
         };
 
+        /*
         let final_type = if attr.requirement != "required" {
             quote! {Option<#type_container>}
         } else {
             type_container
         };
+        */
+        let final_type = quote! {Option<#type_container>};
 
+        /*
         let serde_skip = if attr.requirement != "required" {
             quote! {#[serde(skip_serializing_if = "Option::is_none")]}
         } else {
             quote! {}
         };
+        */
+        
+        // May result in required fields being skipped if object is improperly created
+        let serde_skip = quote! {#[serde(skip_serializing_if = "Option::is_none")]};
 
         let type_token = final_type;
 
@@ -175,6 +183,7 @@ fn generate_struct(name: &str, def: &ClassDef) -> TokenStream {
         #[doc = #doc_str]
         #deprecation_attribute
         #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default )]
+        #[serde(default)]
         #[non_exhaustive]
         pub struct #struct_name {
             #(#fields),*

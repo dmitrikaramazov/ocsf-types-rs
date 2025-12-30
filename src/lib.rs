@@ -3,7 +3,7 @@
 //! The types are generated programmatically from the official OCSF schema.
 //! ## Usage
 //! ```rust
-//! use ocsf_types_rs::AccountChange;
+//! use ocsf_types::AccountChange;
 //! let mut event = AccountChange::default();
 //! event.activity_id = 1;
 //! event.class_uid = 1001;
