@@ -184,3 +184,29 @@ fn extract_nested_data_functional() {
               .and_then(|file_result| file_result.ext.as_deref());
     assert_eq!(file_result_ext, Some("ranked review reverse"));
 }
+
+#[test]
+fn test_http_activity() {
+    let raw_log = include_str!("data/sample_http_activity.json");
+    let event: ocsf_types::HttpActivity = serde_json::from_str(raw_log).expect("Failed to parse HttpActivity log");
+    let http_response = event.http_response.as_ref().expect("HTTP Response is missing");
+    assert_eq!(http_response.code, Some(44));
+
+    assert_eq!(event.activity_id, Some(1));
+    assert_eq!(event.activity_id, Some(ocsf_types::HttpActivityActivityId::Connect as i64));
+    assert_eq!(event.activity_id_enum(), Some(ocsf_types::HttpActivityActivityId::Connect));
+
+    let http_headers = http_response.http_headers.as_ref().expect("HTTP Headers are missing");
+    assert_eq!(http_headers.len(), 2);
+    assert_eq!(http_headers[0].name, Some("hung due ongoing".to_string()));
+    assert_eq!(http_headers[0].value, Some("accounts budgets minister".to_string()));
+    assert_eq!(http_headers[1].name, Some("examinations liabilities scholars".to_string()));
+    assert_eq!(http_headers[1].value, Some("cpu his marilyn".to_string()));
+
+    let timespan = event.traffic.as_ref().and_then(|traffic| traffic.timespan.as_ref());
+    assert_eq!(timespan.and_then(|t| t.type_id_enum()), Some(ocsf_types::TimespanTypeId::Weeks));
+    assert_eq!(timespan.and_then(|t| t.type_id), Some(ocsf_types::TimespanTypeId::Weeks as i64));
+    assert_eq!(timespan.and_then(|t| t.type_id), Some(6));
+    assert_eq!(timespan.and_then(|t| t.duration), Some(3296457038));
+
+}

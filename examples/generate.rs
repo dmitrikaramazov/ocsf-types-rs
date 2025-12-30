@@ -152,25 +152,9 @@ fn generate_struct(name: &str, def: &ClassDef) -> TokenStream {
             let enum_ident = format_ident!("{}",  sanitize_name(&enum_name).to_pascal_case());
             let method_ident = format_ident!("{}_enum", safe_name);
 
-
             enum_defs.push(generate_enum(&enum_name, enum_values));
 
             let mut used_variant_names = std::collections::HashSet::new();
-            /* 
-            let match_arms = enum_values.iter().map(|(key,value)| {
-                let mut variant_name = sanitize_name(&value.caption).to_pascal_case();
-                let id = key.parse::<i64>().unwrap_or(99);
-
-                if used_variant_names.contains(&variant_name) {
-                    variant_name = format!("{}{}", variant_name, id);
-                }
-                used_variant_names.insert(variant_name.clone());
-
-                let variant_ident = format_ident!("{}", variant_name);
-
-                quote!{ #id => Some(#enum_ident::#variant_ident) }
-            });
-            */
 
             let mut string_key_offset:i64 = 1000;
             if attr.is_array {
@@ -351,8 +335,6 @@ fn get_enum_key_id(key: &str, string_key_offset: &mut i64) -> i64 {
 
 fn generate_enum(name: &str, def: &BTreeMap<String, EnumValueInfo>) -> TokenStream {
     let enum_ident = format_ident!("{}", sanitize_name(name).to_pascal_case());
-    //let mut numeric_variants = Vec::new();
-    //let mut string_variants = Vec::new();
     let mut string_key_offset: i64 = 1000; // Start at 1000 to avoid conflicts with numeric variants
 
     let variants_with_ids: Vec<_> = def.iter()
@@ -382,46 +364,6 @@ fn generate_enum(name: &str, def: &BTreeMap<String, EnumValueInfo>) -> TokenStre
                 #variant_ident = #id
             }
         });
-
-    /* 
-    for (key, value) in def.iter() {
-        if let Ok(id) = key.parse::<i64>() {
-            numeric_variants.push((id, key.clone(), value));
-        } else {
-            string_variants.push((next_id, key.clone(),value));
-            next_id += 1;
-        }
-    }
-    let mut all_variants: Vec<_> = numeric_variants.into_iter().collect();
-    all_variants.extend(string_variants);
-    
-    let variants = all_variants.iter()
-                .map(|(id,_key,value)| {
-                    let safe_caption = sanitize_name(&value.caption).to_pascal_case();
-                    let safe_description = value.description.as_deref().unwrap_or("");
-                    let variant_ident = format_ident!("{}", safe_caption);
-                    let doc = format!("{}\n\n{}", safe_caption, safe_description);
-                    quote!{
-                        #[doc = #doc]
-                        #variant_ident = #id
-                    }
-                });
-    */
-
-    /* 
-    let variants = def.iter()
-                .map(|(key,value)| {
-                    let safe_caption = sanitize_name(&value.caption).to_pascal_case();
-                    let safe_description = value.description.as_deref().unwrap_or("");
-                    let variant_ident = format_ident!("{}", safe_caption);
-                    let id = key.parse::<i64>().unwrap_or(99);
-                    let doc = format!("{}\n\n{}", safe_caption, safe_description);
-                    quote!{
-                        #[doc = #doc]
-                        #variant_ident = #id
-                    }
-                });
-    */
 
     quote!{
         #[derive(Debug,Clone,Copy,PartialEq,Eq,Serialize,Deserialize)]
