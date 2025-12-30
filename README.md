@@ -22,20 +22,20 @@ ocsf-types = "0.2.0"
 ## Example
 
 Here is how you may use this package:
-```rs
-use ocsf_types::AccountChange;
-let event = {
-    let mut e = AccountChange::default();
-    e.activity_id = Some(1);
-    // You should ensure that all required fields are entered
-    e
-};
-let serialized = serde.json::to_string(&event).ok();
-
-let event_2 = serde_json::from_value(
-    serde_json::json!({"activity_id":1})
-).ok();
-
+```rust
+fn main() {
+    use ocsf_types::AccountChange;
+    let event = {
+        let mut e = AccountChange::default();
+        e.activity_id = Some(1);
+        // You should ensure that all required fields are entered
+        e
+    };
+    let serialized = serde_json::to_string(&event).ok();
+    let event_2: AccountChange = serde_json::from_value(
+        serde_json::json!({"activity_id":1})
+    ).unwrap();
+}
 ```
 
 ## Development

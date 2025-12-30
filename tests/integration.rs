@@ -172,3 +172,15 @@ fn test_various_ways_to_create_an_event(){
     assert_eq!(serialized, serialized2);
     assert_eq!(serialized2, serialized3);
 }
+
+#[test]
+fn extract_nested_data_functional() {
+    let raw_log = include_str!("data/sample_file_activity.json");
+    let event: ocsf_types::FileActivity = serde_json::from_str(raw_log).expect("Failed to parse FileActivity log");
+    let file_result_ext
+            = event
+              .file_result
+              .as_ref()
+              .and_then(|file_result| file_result.ext.as_deref());
+    assert_eq!(file_result_ext, Some("ranked review reverse"));
+}

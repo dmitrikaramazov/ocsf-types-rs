@@ -16,3 +16,10 @@
 #![recursion_limit = "512"]
 pub mod ocsf_generated;
 pub use ocsf_generated::*;
+
+
+#[cfg(doctest)]
+mod readme_tests{
+    #[doc = include_str!("../README.md")]
+    struct ReadmeDoctests;
+}
