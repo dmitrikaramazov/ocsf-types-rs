@@ -170,8 +170,7 @@ fn generate_struct(name: &str, def: &ClassDef) -> TokenStream {
         let serde_skip = quote! {#[serde(skip_serializing_if = "Option::is_none")]};
 
         let type_token = final_type;
-
-        let attr_doc = format!("{}\n\n{}", attr.caption, attr.description);
+        let attr_doc = format!("{}\n\n{}\n\n{}", attr.caption, attr.description, attr.requirement);
         quote! {
             #[doc = #attr_doc]
             #[serde(rename = #attr_name)]
