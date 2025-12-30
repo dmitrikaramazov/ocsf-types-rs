@@ -1,6 +1,6 @@
 [package]
 name = "ocsf-types"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
 description = "Strongly typed Rust structs for the OCSF (Open Cybersecurity Schema Framework)"
 license = "MIT"
