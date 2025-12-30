@@ -3,7 +3,7 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use serde::Deserialize;
 use std::collections::BTreeMap;
-use std::{fs, string};
+use std::fs;
 use std::path::Path;
 
 #[derive(Deserialize, Debug)]
@@ -156,6 +156,7 @@ fn generate_struct(name: &str, def: &ClassDef) -> TokenStream {
             enum_defs.push(generate_enum(&enum_name, enum_values));
 
             let mut used_variant_names = std::collections::HashSet::new();
+            /* 
             let match_arms = enum_values.iter().map(|(key,value)| {
                 let mut variant_name = sanitize_name(&value.caption).to_pascal_case();
                 let id = key.parse::<i64>().unwrap_or(99);
@@ -169,30 +170,109 @@ fn generate_struct(name: &str, def: &ClassDef) -> TokenStream {
 
                 quote!{ #id => Some(#enum_ident::#variant_ident) }
             });
+            */
 
-            if is_string_field {
-                // field is a string, so parse it to i64
-                helper_methods.push(quote!{
-                    pub fn #method_ident(&self) -> Option<#enum_ident> {
-                        self.#field_ident.as_ref()
-                            .and_then(|v|{
-                                v.parse::<i64>().ok().and_then(|id| match id {
+            let mut string_key_offset:i64 = 1000;
+            if attr.is_array {
+                if is_string_field {
+                    // string vec
+                    let match_arms = enum_values.iter()
+                    .map(|(key,value)|{
+                        let mut variant_name = sanitize_name(&value.caption).to_pascal_case();
+                        let id = get_enum_key_id(key, &mut string_key_offset);
+                        if used_variant_names.contains(&variant_name) {
+                            variant_name = format!("{}{}", variant_name, id);
+                        }
+                        used_variant_names.insert(variant_name.clone());
+                        let variant_ident = format_ident!("{}", variant_name);
+                        let key_str = key.as_str();
+                        quote!{#key_str => Some(#enum_ident::#variant_ident)}
+                    });
+                    helper_methods.push(
+                        quote!{
+                            pub fn #method_ident(&self) -> Option<Vec<#enum_ident>> {
+                                self.#field_ident.as_ref().map(|vec|  {
+                                    vec.iter().filter_map(|v| match v.as_str() {
+                                        #(#match_arms),*,
+                                        _ => None
+                                    }).collect()
+                                })
+                            }
+                    });
+                } else {
+                    // i64 vec
+                    let match_arms = enum_values.iter()
+                    .map(|(key,value)|{
+                        let mut variant_name = sanitize_name(&value.caption).to_pascal_case();
+                        let id = get_enum_key_id(key, &mut string_key_offset);
+                        if used_variant_names.contains(&variant_name) {
+                            variant_name = format!("{}{}", variant_name, id);
+                        }
+                        used_variant_names.insert(variant_name.clone());
+                        let variant_ident = format_ident!("{}", variant_name);
+                        quote!{#id => Some(#enum_ident::#variant_ident)}
+                    });
+                    helper_methods.push(
+                        quote!{
+                            pub fn #method_ident(&self) -> Option<Vec<#enum_ident>> {
+                                self.#field_ident.as_ref().map(|vec|  {
+                                    vec.iter().filter_map(|v| match *v {
+                                        #(#match_arms),*,
+                                        _ => None
+                                    }).collect()
+                                })
+                            }
+                    });
+                }
+            } else {
+                if is_string_field {
+                    // string fields
+                    let match_arms = enum_values.iter()
+                    .map(|(key,value)|
+                        {
+                        let mut variant_name = sanitize_name(&value.caption).to_pascal_case();
+                        let id = get_enum_key_id(key, &mut string_key_offset);
+                        if used_variant_names.contains(&variant_name) {
+                            variant_name = format!("{}{}", variant_name, id);
+                        }
+                        used_variant_names.insert(variant_name.clone());
+                        let variant_ident = format_ident!("{}", variant_name);
+                        let key_str = key.as_str();
+                        quote!{#key_str => Some(#enum_ident::#variant_ident)}
+                    });
+                    helper_methods.push(
+                        quote!{
+                            pub fn #method_ident(&self) -> Option<#enum_ident> {
+                                self.#field_ident.as_deref().and_then(|v| match v {
                                     #(#match_arms),*,
                                     _ => None
                                 })
-                            })
-                    }
-                });
-            } else {
-                // field is an i64, match directly
-                helper_methods.push(quote!{
-                    pub fn #method_ident(&self) -> Option<#enum_ident> {
-                        self.#field_ident.and_then(|v| match v {
-                            #(#match_arms),*,
-                            _ => None
-                        })
-                    }
-                });
+                            }
+                    });
+                } else {
+                    // i64 fields
+                    let match_arms = enum_values.iter()
+                    .map(|(key,value)|{
+                        let mut variant_name = sanitize_name(&value.caption).to_pascal_case();
+                        let id = get_enum_key_id(key, &mut string_key_offset);
+                        if used_variant_names.contains(&variant_name) {
+                            variant_name = format!("{}{}", variant_name, id);
+                        }
+                        used_variant_names.insert(variant_name.clone());
+                        let variant_ident = format_ident!("{}", variant_name);
+                        quote!{#id => Some(#enum_ident::#variant_ident)}
+                    });
+                    helper_methods.push(
+                        quote!{
+                            pub fn #method_ident(&self) -> Option<#enum_ident> {
+                                self.#field_ident.and_then(|v| match v {
+                                    #(#match_arms),*,
+                                    _ => None
+                                })
+                            }
+                        }
+                    );
+                }
             }
         }
 
@@ -260,12 +340,50 @@ fn generate_struct(name: &str, def: &ClassDef) -> TokenStream {
     }
 }
 
+
+fn get_enum_key_id(key: &str, string_key_offset: &mut i64) -> i64 {
+    key.parse::<i64>().unwrap_or_else(|_| {
+        let id = *string_key_offset;
+        *string_key_offset += 1;
+        id
+    })
+}
+
 fn generate_enum(name: &str, def: &BTreeMap<String, EnumValueInfo>) -> TokenStream {
     let enum_ident = format_ident!("{}", sanitize_name(name).to_pascal_case());
-    let mut numeric_variants = Vec::new();
-    let mut string_variants = Vec::new();
-    let mut next_id = 1000; // Start at 1000 to avoid conflicts with numeric variants
+    //let mut numeric_variants = Vec::new();
+    //let mut string_variants = Vec::new();
+    let mut string_key_offset: i64 = 1000; // Start at 1000 to avoid conflicts with numeric variants
 
+    let variants_with_ids: Vec<_> = def.iter()
+        .map(|(key, value)|{
+            let id = get_enum_key_id(key, &mut string_key_offset);
+            (id,key.clone(),value)
+    }).collect();
+
+    let variants = variants_with_ids.iter()
+        .map(|(id,_key,value)| {
+            let safe_caption = sanitize_name(&value.caption).to_pascal_case();
+            let safe_description = value.description.as_deref().unwrap_or("");
+            let variant_ident = format_ident!("{}", safe_caption);
+            let deprecation_attribute = if let Some(info) = &value.deprecated {
+                let msg = format!("{} (Since {})", info.message, info.since);
+                quote!{#[deprecated(note=#msg)]}
+            } else {
+                quote!{}
+            };
+            let source_doc = value.source.as_ref()
+            .map(|s| format!("\n\nSource: {}", s))
+            .unwrap_or_default();
+            let doc = format!("{}\n\n{}\n\n{}", safe_caption, safe_description, source_doc);
+            quote!{
+                #[doc = #doc]
+                #deprecation_attribute
+                #variant_ident = #id
+            }
+        });
+
+    /* 
     for (key, value) in def.iter() {
         if let Ok(id) = key.parse::<i64>() {
             numeric_variants.push((id, key.clone(), value));
@@ -288,6 +406,7 @@ fn generate_enum(name: &str, def: &BTreeMap<String, EnumValueInfo>) -> TokenStre
                         #variant_ident = #id
                     }
                 });
+    */
 
     /* 
     let variants = def.iter()

@@ -1,6 +1,3 @@
-use ocsf_types::AccountChangeSeverityId;
-
-
 #[test]
 fn test_parse_raw_json() {
     let raw_log = include_str!("data/sample_file_activity.json");
@@ -14,7 +11,7 @@ fn test_parse_raw_json() {
 
     assert_eq!(reporter_name, "jul gtk cleaners");
     assert_eq!(activity_id, 12);
-    assert_eq!(activity_id, ocsf_types::FileActivityActivityId::Allowed);
+    assert_eq!(activity_id, ocsf_types::FileActivityActivityId::Mount as i64);
 }
 
 #[test]
