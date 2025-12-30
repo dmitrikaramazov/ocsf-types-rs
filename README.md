@@ -1,4 +1,10 @@
 # OCSF Types for Rust
+[![Crates.io](https://img.shields.io/crates/v/ocsf-types.svg)](https://crates.io/crates/ocsf-types)
+[![Docs.rs](https://docs.rs/ocsf-types/badge.svg)](https://docs.rs/ocsf-types)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Downloads](https://img.shields.io/crates/d/ocsf-types.svg)](https://crates.io/crates/ocsf-types)
+![Maintenance](https://img.shields.io/badge/maintenance-actively--developed-brightgreen.svg)
+
 Strongly typed Rust structs for the [OCSF](https://schema.ocsf.io/)
 
 This crate provides native Rust types for OCSF events, objects, and enums. It is generated programmatically from the official OCSF schema. It uses the official python OCSF compile tool to first create a flattened JSON schema then use `serde` to parse it. 
@@ -10,18 +16,26 @@ The goal of this project is to provide an easy, safe interface that fully matche
 Add this to your `Cargo.toml`:
 ```toml
 [dependencies]
-ocsf-types = "0.1.0"
+ocsf-types = "0.2.0"
 ```
 
 ## Example
 
 Here is how you may use this package:
 ```rs
-use ocsf_types_rs::AccountChange;
-let mut event = AccountChange::default();
-event.activity_id = 1;
-event.class_uid = 1001;
-event.message = Some("User password changed".to_string());
+use ocsf_types::AccountChange;
+let event = {
+    let mut e = AccountChange::default();
+    e.activity_id = Some(1);
+    // You should ensure that all required fields are entered
+    e
+};
+let serialized = serde.json::to_string(&event).ok();
+
+let event_2 = serde_json::from_value(
+    serde_json::json!({"activity_id":1})
+).ok();
+
 ```
 
 ## Development

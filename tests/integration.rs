@@ -109,3 +109,66 @@ fn round_trip_de_serialization_is_idempotent() {
     assert_eq!(event.category_uid, Some(5));
     assert_eq!(event2.category_uid, Some(5));
 }
+
+#[test]
+fn verify_default_values() {
+    let mut event = ocsf_types::AccountChange::default();
+    assert_eq!(event.activity_id, None);
+    assert_eq!(event.class_uid, None);
+    assert_eq!(event.message, None);
+    assert_eq!(event.metadata, None);
+    assert_eq!(event.observables, None);
+    assert_eq!(event.unmapped, None);
+    assert_eq!(event.activity_name, None);
+    assert_eq!(event.category_name, None);
+    assert_eq!(event.category_uid, None);
+    event.activity_id = Some(1);
+    event.class_uid = Some(1001);
+    event.message = Some("User password changed".to_string());
+    event.metadata = Some(Box::new(ocsf_types::Metadata::default()));
+    event.observables = Some(vec![ocsf_types::Observable::default()]);
+    event.unmapped = Some(serde_json::json!({}));
+    event.activity_name = Some("User password changed".to_string());
+    event.category_name = Some("User password changed".to_string());
+    event.category_uid = Some(1);
+    assert_eq!(event.activity_id, Some(1));
+    assert_eq!(event.class_uid, Some(1001));
+    assert_eq!(event.message, Some("User password changed".to_string()));
+    assert_eq!(event.metadata, Some(Box::new(ocsf_types::Metadata::default())));
+    assert_eq!(event.observables, Some(vec![ocsf_types::Observable::default()]));
+    assert_eq!(event.unmapped, Some(serde_json::json!({})));
+    assert_eq!(event.activity_name, Some("User password changed".to_string()));
+    assert_eq!(event.category_name, Some("User password changed".to_string()));
+    assert_eq!(event.category_uid, Some(1));
+}
+
+#[test]
+fn test_various_ways_to_create_an_event(){
+    use ocsf_types::AccountChange;
+    // Note - you should ensure that all required fields exist
+    let mut event = AccountChange::default();
+    event.activity_id = Some(1);
+    let event2 = {
+        let mut e = AccountChange::default();
+        e.activity_id = Some(1);
+        e
+    };
+    let event3: AccountChange = serde_json::from_value(
+        serde_json::json!({
+            "activity_id": 1,
+        })
+    ).expect("Failed to parse AccountChange log");
+
+    assert_eq!(event2, event3);
+    assert_eq!(event, event2);
+
+    let serialized = serde_json::to_string(&event)
+                             .expect("Failed to serialize AccountChange log 1");
+    let serialized2 = serde_json::to_string(&event2)
+                             .expect("Failed to serialize AccountChange log 2");
+    let serialized3 = serde_json::to_string(&event3)
+                             .expect("Failed to serialize AccountChange log 3");
+
+    assert_eq!(serialized, serialized2);
+    assert_eq!(serialized2, serialized3);
+}
