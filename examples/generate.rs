@@ -3,7 +3,7 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use serde::Deserialize;
 use std::collections::BTreeMap;
-use std::fs;
+use std::{fs, string};
 use std::path::Path;
 
 #[derive(Deserialize, Debug)]
@@ -57,6 +57,16 @@ struct AttributeDef {
     requirement: String,
     #[serde(default)]
     is_array: bool,
+    #[serde(default, rename="enum")]
+    r#enum: Option<BTreeMap<String, EnumValueInfo>>,
+}
+
+#[derive(Deserialize, Debug)]
+struct EnumValueInfo {
+    caption: String,
+    description: Option<String>,
+    source: Option<String>,
+    deprecated: Option<DeprecatedInfo>,
 }
 
 fn main() {
@@ -94,7 +104,11 @@ fn main() {
 
 fn generate_struct(name: &str, def: &ClassDef) -> TokenStream {
     let struct_name = format_ident!("{}", name.to_pascal_case());
+    let struct_name_str = name.to_pascal_case();
+    let mut enum_defs = Vec::new();
+    let mut helper_methods = Vec::new();
 
+    // Struct docs
     let deprecation_attribute = if let Some(info) = &def.deprecated {
         let msg = format!("{} (Since {})", info.message, info.since);
         quote! {#[deprecated(note = #msg)]}
@@ -118,16 +132,76 @@ fn generate_struct(name: &str, def: &ClassDef) -> TokenStream {
         "{}\n\n{}\n\n[{}] {}{}",
         def.caption, def.description, uid_doc, meta_doc, constraint_doc
     );
+
+    // Struct fields
     let fields = def.attributes.iter().map(|(attr_name, attr)| {
         let safe_name = sanitize_name(attr_name);
         let field_ident = format_ident!("{}", safe_name);
-
         let raw_type = map_ocsf_type(&attr.type_name);
+        let is_string_field = matches!(
+            attr.type_name.as_str(),
+                "string_t" | "string" | "bytestring_t" | "datetime_t" | "email_t" | 
+                "file_hash_t" | "file_name_t" | "file_path_t" | "hostname_t" | 
+                "ip_t" | "mac_t" | "subnet_t" | "url_t" | "username_t" | "uuid_t" |
+                "process_name_t" | "reg_key_path_t" | "resource_uid_t" 
+        );
+
+        // Enum generation
+        if let Some(enum_values) = &attr.r#enum {
+            let enum_name = format!("{}{}", struct_name_str, attr_name.to_pascal_case());
+            let enum_ident = format_ident!("{}",  sanitize_name(&enum_name).to_pascal_case());
+            let method_ident = format_ident!("{}_enum", safe_name);
+
+
+            enum_defs.push(generate_enum(&enum_name, enum_values));
+
+            let mut used_variant_names = std::collections::HashSet::new();
+            let match_arms = enum_values.iter().map(|(key,value)| {
+                let mut variant_name = sanitize_name(&value.caption).to_pascal_case();
+                let id = key.parse::<i64>().unwrap_or(99);
+
+                if used_variant_names.contains(&variant_name) {
+                    variant_name = format!("{}{}", variant_name, id);
+                }
+                used_variant_names.insert(variant_name.clone());
+
+                let variant_ident = format_ident!("{}", variant_name);
+
+                quote!{ #id => Some(#enum_ident::#variant_ident) }
+            });
+
+            if is_string_field {
+                // field is a string, so parse it to i64
+                helper_methods.push(quote!{
+                    pub fn #method_ident(&self) -> Option<#enum_ident> {
+                        self.#field_ident.as_ref()
+                            .and_then(|v|{
+                                v.parse::<i64>().ok().and_then(|id| match id {
+                                    #(#match_arms),*,
+                                    _ => None
+                                })
+                            })
+                    }
+                });
+            } else {
+                // field is an i64, match directly
+                helper_methods.push(quote!{
+                    pub fn #method_ident(&self) -> Option<#enum_ident> {
+                        self.#field_ident.and_then(|v| match v {
+                            #(#match_arms),*,
+                            _ => None
+                        })
+                    }
+                });
+            }
+        }
+
+        //
 
         let is_primitive = matches!(
             attr.type_name.as_str(),
             // String types
-            "string_t" | "string" | "bytestring_t" | "datetime_t" | "email_t" | 
+                "string_t" | "string" | "bytestring_t" | "datetime_t" | "email_t" | 
                 "file_hash_t" | "file_name_t" | "file_path_t" | "hostname_t" | 
                 "ip_t" | "mac_t" | "subnet_t" | "url_t" | "username_t" | "uuid_t" |
                 "process_name_t" | "reg_key_path_t" | "resource_uid_t" |
@@ -148,24 +222,12 @@ fn generate_struct(name: &str, def: &ClassDef) -> TokenStream {
         } else {
             raw_type
         };
-
-        /*
-        let final_type = if attr.requirement != "required" {
-            quote! {Option<#type_container>}
-        } else {
-            type_container
-        };
-        */
+        // No longer handling requirement
+        // Always wrap in Option<T>
+        // If a user needs to see if a field is required, 
+        // they should check the requirement field in the attribute definition
         let final_type = quote! {Option<#type_container>};
 
-        /*
-        let serde_skip = if attr.requirement != "required" {
-            quote! {#[serde(skip_serializing_if = "Option::is_none")]}
-        } else {
-            quote! {}
-        };
-        */
-        
         // May result in required fields being skipped if object is improperly created
         let serde_skip = quote! {#[serde(skip_serializing_if = "Option::is_none")]};
 
@@ -178,6 +240,8 @@ fn generate_struct(name: &str, def: &ClassDef) -> TokenStream {
             pub #field_ident: #type_token
         }
     });
+
+    // Struct definition
     quote! {
         #[doc = #doc_str]
         #deprecation_attribute
@@ -186,6 +250,65 @@ fn generate_struct(name: &str, def: &ClassDef) -> TokenStream {
         #[non_exhaustive]
         pub struct #struct_name {
             #(#fields),*
+        }
+
+        impl #struct_name {
+            #(#helper_methods)*
+        }
+
+        #(#enum_defs)*
+    }
+}
+
+fn generate_enum(name: &str, def: &BTreeMap<String, EnumValueInfo>) -> TokenStream {
+    let enum_ident = format_ident!("{}", sanitize_name(name).to_pascal_case());
+    let mut numeric_variants = Vec::new();
+    let mut string_variants = Vec::new();
+    let mut next_id = 1000; // Start at 1000 to avoid conflicts with numeric variants
+
+    for (key, value) in def.iter() {
+        if let Ok(id) = key.parse::<i64>() {
+            numeric_variants.push((id, key.clone(), value));
+        } else {
+            string_variants.push((next_id, key.clone(),value));
+            next_id += 1;
+        }
+    }
+    let mut all_variants: Vec<_> = numeric_variants.into_iter().collect();
+    all_variants.extend(string_variants);
+    
+    let variants = all_variants.iter()
+                .map(|(id,_key,value)| {
+                    let safe_caption = sanitize_name(&value.caption).to_pascal_case();
+                    let safe_description = value.description.as_deref().unwrap_or("");
+                    let variant_ident = format_ident!("{}", safe_caption);
+                    let doc = format!("{}\n\n{}", safe_caption, safe_description);
+                    quote!{
+                        #[doc = #doc]
+                        #variant_ident = #id
+                    }
+                });
+
+    /* 
+    let variants = def.iter()
+                .map(|(key,value)| {
+                    let safe_caption = sanitize_name(&value.caption).to_pascal_case();
+                    let safe_description = value.description.as_deref().unwrap_or("");
+                    let variant_ident = format_ident!("{}", safe_caption);
+                    let id = key.parse::<i64>().unwrap_or(99);
+                    let doc = format!("{}\n\n{}", safe_caption, safe_description);
+                    quote!{
+                        #[doc = #doc]
+                        #variant_ident = #id
+                    }
+                });
+    */
+
+    quote!{
+        #[derive(Debug,Clone,Copy,PartialEq,Eq,Serialize,Deserialize)]
+        #[repr(i64)]
+        pub enum #enum_ident {
+            #(#variants),*
         }
     }
 }
